@@ -10,24 +10,17 @@
         private int wordCount = 0;
 
         // GET: Proxy
-        public string Index(string companyName, int postID)
+        public string Index()
         {
-            if (string.IsNullOrEmpty(companyName) || postID <= 0)
-            {
-                return "company or postID is null or invalid";
-            }
-            else
-            {
                 try
                 {
-                    var content = new HabrBlogParse(postID, companyName, Request).Parse();
+                    var content = new HabrBlogParse(Request).Parse();
                     return content;
                 }
-                catch (Exception)
+                catch 
                 {
                     return "An error has occurred";
                 }
-            }
         }
     }
 }

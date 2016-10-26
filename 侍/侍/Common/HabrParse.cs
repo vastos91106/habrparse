@@ -14,42 +14,33 @@
     {
         private int wordCount = 0;
 
-        private string CompanyName;
-
-        private int PostID;
-
         private HttpRequestBase Request;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="postId"></param>
-        /// <param name="companyName"></param>
-        /// <param name="request"></param>
-        public HabrBlogParse(int postId, string companyName, HttpRequestBase request)
+        public HabrBlogParse(HttpRequestBase request)
         {
-            this.PostID = postId;
-            this.CompanyName = companyName;
             this.Request = request;
         }
 
         public string Parse()
         {
-            var html = new HtmlDownloader().GetAsString($"https://habrahabr.ru/company/{CompanyName}/blog/{PostID}/");
+            var url = "https://habr.ru";
+
+            if (Request.Url.Segments.Count() > 1)
+            {
+                url += Request.Url.AbsolutePath;
+            }
+
+            var html = new HtmlDownloader().GetAsString(url);
 
             var htmlDocument = new HtmlDocument();
             htmlDocument.LoadHtml(html);
             var document = htmlDocument.DocumentNode;
 
-            var nodes = document.QuerySelectorAll(".post__body").First();
+            SetTM(document);
 
-            var wordCount = 0;
+            SetHref(document);
 
-            SetTM(nodes);
-
-            SetHref(nodes);
-
-            return nodes.InnerHtml;
+            return document.InnerHtml;
         }
 
         /// <summary>
@@ -77,21 +68,28 @@
             {
                 var phrase = new StringBuilder();
 
-                //todo учет символов ;,: итд
-                foreach (var word in node.InnerHtml.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                foreach (var word in Regex.Split(node.InnerHtml, @"\s+",RegexOptions.Compiled))
                 {
-                    if (word.Length == 6)
+                    var match = Regex.Matches(word, "[a-zа-яA-ZА-Я]", RegexOptions.Compiled);
+                    if (match.Count == 6)
                     {
-                        var item = $"{word}™ ";
-                        phrase.Append(item);
-                        continue;
+                        var index = 0;
+                        foreach (Match t in match)
+                        {
+                            index += 1;
+                            if (index == 6)
+                            {
+                                var item = word;
+                                item = $"{item.Insert(t.Index + 1, "™")} " ;
+                                phrase.Append(item);
+                            }
+                        }
                     }
                     else
                     {
                         phrase.Append($"{word} ");
                     }
                 }
-
                 node.InnerHtml = phrase.ToString();
             }
 
